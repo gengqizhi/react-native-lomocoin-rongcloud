@@ -2,8 +2,8 @@
     package="com.lomocoin.imlib">
 
     <uses-sdk
-        android:minSdkVersion="16"
-        android:targetSdkVersion="23" />
+        android:minSdkVersion="15"
+        android:targetSdkVersion="20" />
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -20,10 +20,10 @@
 
 
     <!-- GCM 配置开始 < -->
-    <permission
+    <!-- <permission
         android:name="com.lomocoin.lomocoin.permission.C2D_MESSAGE"
         android:protectionLevel="signature" />
-    <uses-permission android:name="com.lomocoin.lomocoin.permission.C2D_MESSAGE" />
+    <uses-permission android:name="com.lomocoin.lomocoin.permission.C2D_MESSAGE" /> -->
     <!-- GCM 配置结束 < -->
 
     <application>
@@ -39,23 +39,55 @@
             </intent-filter>
         </receiver>
 
+
+        <!-- GCM 配置 < -->
+        <!--<receiver-->
+            <!--android:name="com.google.android.gms.gcm.GcmReceiver"-->
+            <!--android:exported="true"-->
+            <!--android:permission="com.google.android.c2dm.permission.SEND">-->
+            <!--<intent-filter>-->
+                <!--&lt;!&ndash; for Gingerbread GSF backward compat &ndash;&gt;-->
+                <!--<action android:name="com.google.android.c2dm.intent.REGISTRATION" />-->
+                <!--<action android:name="com.google.android.c2dm.intent.RECEIVE" />-->
+
+                <!--<category android:name="com.lomocoin.lomocoin" />-->
+                <!--&lt;!&ndash; 替换为自己的packagename < &ndash;&gt;-->
+            <!--</intent-filter>-->
+        <!--</receiver>-->
+
+
+        <!--<service-->
+            <!--android:name="io.rong.push.platform.RongGcmListenerService"-->
+            <!--android:exported="false">-->
+            <!--<intent-filter>-->
+                <!--<action android:name="com.google.android.c2dm.intent.RECEIVE" />-->
+            <!--</intent-filter>-->
+        <!--</service>-->
+        <!--<service-->
+            <!--android:name="io.rong.push.platform.RongGCMInstanceIDListenerService"-->
+            <!--android:exported="false">-->
+            <!--<intent-filter>-->
+                <!--<action android:name="com.google.android.gms.iid.InstanceID" />-->
+            <!--</intent-filter>-->
+        <!--</service>-->
+        <!-- GCM 配置结束 < -->
         <!-- [START firebase_service] -->
-        <service
+        <!-- <service
             android:name="io.rong.push.platform.RongFirebaseMessagingService"
             android:stopWithTask="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT"/>
             </intent-filter>
-        </service>
+        </service> -->
         <!-- [END firebase_service] -->
         <!-- [START firebase_iid_service] -->
-        <service
+        <!-- <service
             android:name="io.rong.push.platform.RongFirebaseInstanceIDService"
             android:stopWithTask="false">
             <intent-filter>
                 <action android:name="com.google.firebase.INSTANCE_ID_EVENT"/>
             </intent-filter>
-        </service>
+        </service> -->
         <!-- [END firebase_iid_service] -->
 
         <!-- imlib config begin -->
@@ -67,8 +99,7 @@
 
         <service
             android:name="io.rong.imlib.ReConnectService"
-            android:exported="true"
-            android:permission="android.permission.BIND_JOB_SERVICE" />
+            android:exported="true" />
 
         <receiver
             android:name="io.rong.imlib.ConnectChangeReceiver"
@@ -84,22 +115,17 @@
         <!--第三方相关,向第三方推送服务请求 token 的服务 -->
         <service
             android:name="io.rong.push.core.PushRegistrationService"
-            android:exported="true"
-            android:permission="android.permission.BIND_JOB_SERVICE"
-            />
+            android:exported="false"></service>
 
         <!-- 处理 push 消息相关的服务 -->
         <service
             android:name="io.rong.push.core.MessageHandleService"
-            android:exported="true"
-            android:permission="android.permission.BIND_JOB_SERVICE"
-            />
+            android:exported="true"></service>
 
         <!-- push服务 -->
         <service
             android:name="io.rong.push.PushService"
             android:exported="true"
-            android:permission="android.permission.BIND_JOB_SERVICE"
             android:process="io.rong.push">  <!-- push进程，可以改名 -->
         </service>
 

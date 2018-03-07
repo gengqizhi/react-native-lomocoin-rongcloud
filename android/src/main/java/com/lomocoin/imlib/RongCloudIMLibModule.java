@@ -24,7 +24,7 @@ import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
-import com.google.firebase.iid.FirebaseInstanceId;
+// import com.google.firebase.iid.FirebaseInstanceId;
 
 import android.text.TextUtils;
 import android.util.Log;
@@ -116,14 +116,14 @@ public class RongCloudIMLibModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void initWithAppKey(String appKey) {
         // Log.e("isme", "rong init appkey:" + appKey);
-        try {
-            RongPushClient.registerFCM(context);
-            String appId = FirebaseInstanceId.getInstance().getToken();
-//            FirebaseMessaging.getInstance().subscribeToTopic("testTopic");
-            // Log.e("isme", "token:" + appId);
-        } catch (RongException e) {
-            // e.printStackTrace();
-        }
+//         try {
+//             RongPushClient.registerFCM(context);
+//             String appId = FirebaseInstanceId.getInstance().getToken();
+// //            FirebaseMessaging.getInstance().subscribeToTopic("testTopic");
+//             // Log.e("isme", "token:" + appId);
+//         } catch (RongException e) {
+//             // e.printStackTrace();
+//         }
         RongIMClient.init(context, appKey);
     }
 
@@ -168,9 +168,7 @@ public class RongCloudIMLibModule extends ReactContextBaseJavaModule {
                     public void run() {
                         try {
                             Activity activity = getCurrentActivity();
-//                            if (isBackground(activity)) {
-                            //关闭 按home键后的消息提醒
-                            if (false) {
+                            if (isBackground(activity)) {
                                 Uri.Builder builder = Uri.parse("rong://" + activity.getPackageName()).buildUpon();
 
                                 builder.appendPath("conversation").appendPath("lomostar")
@@ -196,7 +194,7 @@ public class RongCloudIMLibModule extends ReactContextBaseJavaModule {
                     }
                 });
 
-                
+
                 return true;
             }
         });
@@ -314,7 +312,7 @@ public class RongCloudIMLibModule extends ReactContextBaseJavaModule {
                             TextMessage textMessage = (TextMessage) message;
                             msg.putString("lastestMessage", textMessage.getContent());
                             msg.putString("msgType", "text");
-                        } else if (message instanceof RichContentMessage || message instanceof ImageMessage) {
+                        } else if (message instanceof RichContentMessage) {
                             msg.putString("msgType", "image");
                         } else if (message instanceof VoiceMessage) {
                             msg.putString("msgType", "voice");
@@ -355,7 +353,7 @@ public class RongCloudIMLibModule extends ReactContextBaseJavaModule {
                             TextMessage textMessage = (TextMessage) message;
                             msg.putString("lastestMessage", textMessage.getContent());
                             msg.putString("msgType", "text");
-                        } else if (message instanceof RichContentMessage || message instanceof ImageMessage) {
+                        } else if (message instanceof RichContentMessage) {
                             msg.putString("msgType", "image");
                         } else if (message instanceof VoiceMessage) {
                             msg.putString("msgType", "voice");
@@ -485,28 +483,24 @@ public class RongCloudIMLibModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void clearUnreadMessage(int mType, String targetId, Promise promise) {
-        try {
-            ConversationType type = formatConversationType(mType);
-            boolean is = RongIMClient.getInstance().clearMessagesUnreadStatus(type, targetId);
-            promise.resolve(is);
-        } catch (Exception e) {
-            promise.reject("error", "error");
-        }
+        ConversationType type = formatConversationType(mType);
+        boolean is = RongIMClient.getInstance().clearMessagesUnreadStatus(type, targetId);
+        promise.resolve(is);
     }
 
     //停止播放
     @ReactMethod
     public void getFCMToken(Promise promise) {
-        try {
-            String appId = FirebaseInstanceId.getInstance().getToken();
-            if (!TextUtils.isEmpty(appId)) {
-                promise.resolve(appId);
-            } else {
-                promise.reject("error", "error");
-            }
-        } catch (Exception e) {
+        // try {
+        //     String appId = FirebaseInstanceId.getInstance().getToken();
+        //     if (!TextUtils.isEmpty(appId)) {
+        //         promise.resolve(appId);
+        //     } else {
+        //         promise.reject("error", "error");
+        //     }
+        // } catch (Exception e) {
             promise.reject("error", "error");
-        }
+        // }
     }
 
 
@@ -522,7 +516,7 @@ public class RongCloudIMLibModule extends ReactContextBaseJavaModule {
         msg.putString("receivedTime", message.getReceivedTime() + "");
         msg.putString("sentTime", message.getSentTime() + "");
         msg.putString("senderUserId", message.getSenderUserId());
-        msg.putString("messageUId", message.getUId());
+        msg.putString("messageUId", "");
         msg.putInt("messageDirection", message.getMessageDirection().getValue());
 
         if (message.getContent() instanceof TextMessage) {
@@ -656,9 +650,11 @@ public class RongCloudIMLibModule extends ReactContextBaseJavaModule {
                     Conversation.ConversationNotificationStatus.NOTIFY;//消息通知
             RongIMClient.getInstance().setConversationNotificationStatus(type, targetId, status, new ResultCallback<Conversation.ConversationNotificationStatus>() {
                 @Override
-                public void onSuccess(Conversation.ConversationNotificationStatus state) {
-                    int isNotify = state == Conversation.ConversationNotificationStatus.NOTIFY ? 1 : 0;
-                    promise.resolve(isNotify);//1:（新消息提醒） 0:（屏蔽）
+                public void onSuccess(Conversation.ConversationNotificationStatus conversationNotificationStatus) {
+                    String state = conversationNotificationStatus ==
+                            Conversation.ConversationNotificationStatus.DO_NOT_DISTURB ?
+                            "0" : "1";
+                    promise.resolve(state);
                 }
 
                 @Override
@@ -671,7 +667,7 @@ public class RongCloudIMLibModule extends ReactContextBaseJavaModule {
         }
     }
 
-    //获取会话消息提醒状态  （return 1:（新消息提醒） 0:（屏蔽） ）
+    //获取会话消息提醒状态  （return  0:（屏蔽） 1:（新消息提醒））
     @ReactMethod
     public void getConversationNotificationStatus(int mType, String targetId, final Promise promise) {
         try {
@@ -679,9 +675,11 @@ public class RongCloudIMLibModule extends ReactContextBaseJavaModule {
 
             RongIMClient.getInstance().getConversationNotificationStatus(type, targetId, new ResultCallback<Conversation.ConversationNotificationStatus>() {
                 @Override
-                public void onSuccess(Conversation.ConversationNotificationStatus state) {
-                    int isNotify = state == Conversation.ConversationNotificationStatus.NOTIFY ? 1 : 0;
-                    promise.resolve(isNotify);//1:（新消息提醒） 0:（屏蔽）
+                public void onSuccess(Conversation.ConversationNotificationStatus conversationNotificationStatus) {
+                    String state = conversationNotificationStatus ==
+                            Conversation.ConversationNotificationStatus.DO_NOT_DISTURB ?
+                            "0" : "1";
+                    promise.resolve(state);
                 }
 
                 @Override
@@ -736,7 +734,7 @@ public class RongCloudIMLibModule extends ReactContextBaseJavaModule {
         }
     }
 
-    ////获取全局新消息提醒状态 （return  0:(全局消息屏蔽)  1:(全局新消息提醒)）
+    ////获取全局新消息提醒状态 （return  true:(全局消息屏蔽)  false:(全局新消息提醒)）
     @ReactMethod
     public void getGlobalNotificationStatus(final Promise promise) {
         try {
@@ -744,9 +742,9 @@ public class RongCloudIMLibModule extends ReactContextBaseJavaModule {
                 @Override
                 public void onSuccess(String s, int i) {
                     if(i > 0){
-                        promise.resolve(0);
+                        promise.resolve(true);
                     }else{
-                        promise.resolve(1);
+                        promise.resolve(false);
                     }
                 }
 
