@@ -45,6 +45,7 @@ export default {
         return RongCloudIMLib.connectWithToken(token);
     },
     getTotalUnreadCount() {
+    	// 获取全部未读消息数量（此消息数量为SDK本地查询到的未读消息数（有可能包含已退出群组的消息数量））
         return RongCloudIMLib.getTotalUnreadCount();
     },
     getTargetUnreadCount(conversationType, targetId) {
@@ -52,7 +53,7 @@ export default {
         return RongCloudIMLib.getTargetUnreadCount(conversationType, targetId);
     },
     getConversationsUnreadCount(conversationTypes) {
-    	// 获取某些会话类型（conversationTypes为数组）的未读消息数
+    	// 获取某些会话类型（conversationTypes为数组）的未读消息数（此消息数量为SDK本地查询到的未读消息数（有可能包含已退出群组的消息数量））
         return RongCloudIMLib.getConversationsUnreadCount(conversationTypes);
     },
     clearUnreadMessage(conversationType, targetId){
@@ -105,7 +106,7 @@ export default {
     	return RongCloudIMLib.removeScreenOfGlobalNotification();
     },
     getGlobalNotificationStatus() {
-    	//获取全局新消息提醒状态 （return  true:(全局消息屏蔽)  false:(全局新消息提醒)）
+    	//获取全局新消息提醒状态 （ return  0:（屏蔽） 1:（新消息提醒））
     	return RongCloudIMLib.getGlobalNotificationStatus();
     },
     //isReceivePush-true 开启后台推送 false-关闭后台推送
