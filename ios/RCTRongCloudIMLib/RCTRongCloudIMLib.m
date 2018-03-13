@@ -136,17 +136,6 @@ RCT_EXPORT_METHOD(getTargetUnreadCount:(int)type
     }
 }
 
-RCT_EXPORT_METHOD(getConversationsUnreadCount:(NSArray *)types
-                  resolve:(RCTPromiseResolveBlock)resolve
-                  reject:(RCTPromiseRejectBlock)reject) {
-    int unreadCount = [[self getClient] getUnreadCount:types];
-    if(unreadCount){
-        resolve(@(unreadCount));
-    }else{
-        reject(@"获取失败",@"获取失败",nil);
-    }
-}
-
 RCT_EXPORT_METHOD(clearUnreadMessage:(int)type
                   targetId:(NSString *)targetId) {
     

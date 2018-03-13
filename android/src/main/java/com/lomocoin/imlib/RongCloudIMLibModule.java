@@ -800,33 +800,6 @@ public class RongCloudIMLibModule extends ReactContextBaseJavaModule {
         }
     }
 
-    // 获取某些会话类型（conversationTypes为数组）的未读消息数
-    @ReactMethod
-    public void getConversationsUnreadCount(int[] conversationTypes,final Promise promise) {
-        try {
-            List<ConversationType> lists = new ArrayList<>();
-            for(int t : conversationTypes){
-                ConversationType type = formatConversationType(t);
-                lists.add(type);
-            }
-            ConversationType[] types = (ConversationType[])lists.toArray(new ConversationType[lists.size()]);
-
-            RongIMClient.getInstance().getUnreadCount(types, new ResultCallback<Integer>() {
-                @Override
-                public void onSuccess(Integer integer) {
-                    promise.resolve(integer);
-                }
-
-                @Override
-                public void onError(RongIMClient.ErrorCode errorCode) {
-                    promise.reject("error", "error");
-                }
-            });
-        } catch (Exception e) {
-            promise.reject("error", "error");
-        }
-    }
-
 
     protected void sendEvent(String eventName, @Nullable WritableMap params) {
         context.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
