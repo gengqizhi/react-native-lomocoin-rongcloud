@@ -28,7 +28,7 @@
 
     <application>
 
-        <receiver
+        <!-- <receiver
             android:name="com.lomocoin.imlib.RongNotificationReceiver"
             android:exported="true">
             <intent-filter>
@@ -37,7 +37,7 @@
                 <action android:name="io.rong.push.intent.MESSAGE_CLICKED" />
                 <action android:name="io.rong.push.intent.MI_MESSAGE_CLICKED" />
             </intent-filter>
-        </receiver>
+        </receiver> -->
 
 
         <!-- GCM 配置 < -->
