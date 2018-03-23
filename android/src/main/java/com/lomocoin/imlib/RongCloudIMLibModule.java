@@ -68,7 +68,9 @@ public class RongCloudIMLibModule extends ReactContextBaseJavaModule {
         recoderUtils.setOnAudioStatusUpdateListener(new AudioRecoderUtils.OnAudioStatusUpdateListener() {
             @Override
             public void onUpdate(double db, long time) {
-
+                WritableMap map = Arguments.createMap();
+                map.putDouble("db", db);
+                sendEvent("onUpdateDB", map);
             }
 
             @Override
@@ -387,7 +389,7 @@ public class RongCloudIMLibModule extends ReactContextBaseJavaModule {
 
             @Override
             public void onSuccess(Message message) {
-                promise.resolve(message.getMessageId() + "");
+                promise.resolve(message.getUId() + "");
             }
 
             @Override
@@ -400,14 +402,12 @@ public class RongCloudIMLibModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void sendImageMessage(int mType, String targetId, String imageUrl, String pushContent, final Promise promise) {
 
-        imageUrl = ImgCompressUtils.compress(context, imageUrl);//压缩图片处理
-//        Log.e("isme","inthis: "+imageUrl);
+        imageUrl = ImgCompressUtils.compress(context, imageUrl);
         if (imageUrl.startsWith("content")) {
             imageUrl = "file://" + BitmapUtils.getRealFilePath(context, Uri.parse(imageUrl));
         } else {
             imageUrl = "file://" + imageUrl;
         }
-//        Log.e("isme","path:  "+imageUrl);
         ConversationType type = formatConversationType(mType);
 
         Uri uri = Uri.parse(imageUrl);
@@ -421,13 +421,12 @@ public class RongCloudIMLibModule extends ReactContextBaseJavaModule {
 
             @Override
             public void onError(Message message, RongIMClient.ErrorCode errorCode) {
-                promise.reject("error", "error");
+                promise.reject("error", errorCode.getMessage());
             }
 
             @Override
             public void onSuccess(Message message) {
-//                Log.e("isme","发送成功");
-                promise.resolve(message.getMessageId() + "");
+                promise.resolve(message.getUId() + "");
             }
 
             @Override
@@ -438,7 +437,7 @@ public class RongCloudIMLibModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void sendVoiceMessage(int mType, String targetId, String voiceData, int duration, String pushContent, final Promise promise) {
+    public void sendVoiceMessage(int mType, String targetId, final String voiceData, int duration, String pushContent, final Promise promise) {
         VoiceMessage voiceMessage = VoiceMessage.obtain(Uri.parse(voiceData), duration);
         ConversationType type = formatConversationType(mType);
         String pushData = "";
@@ -450,12 +449,17 @@ public class RongCloudIMLibModule extends ReactContextBaseJavaModule {
 
             @Override
             public void onSuccess(Message message) {
-                promise.resolve(message.getMessageId() + "");
+                WritableMap map = Arguments.createMap();
+                VoiceMessage msg = (VoiceMessage) message.getContent();
+                map.putString("uid", message.getUId() + "");
+                map.putString("uri", msg.getUri().toString());
+                map.putInt("duration", msg.getDuration());
+                promise.resolve(map);
             }
 
             @Override
             public void onError(Message message, RongIMClient.ErrorCode errorCode) {
-                promise.reject("发送失败", "发送失败");
+                promise.reject("error", errorCode.getMessage());
             }
         });
     }

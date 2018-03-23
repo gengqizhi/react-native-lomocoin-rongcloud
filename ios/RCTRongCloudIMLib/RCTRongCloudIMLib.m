@@ -16,6 +16,7 @@
 {
     BOOL       _isSend;    //是否已发送
     NSTimer *  _longTimer; //60s定时器
+    NSTimer *  _timer;
     NSInteger  _duration;  //语音时长
 }
 
@@ -37,7 +38,7 @@ RCT_EXPORT_MODULE(RongCloudIMLibModule)
 
 - (NSArray<NSString *> *)supportedEvents
 {
-    return @[@"onRongMessageReceived"];
+    return @[@"onRongMessageReceived",@"onUpdateDB"];
 }
 
 #pragma mark RongCloud Init
@@ -338,7 +339,19 @@ RCT_EXPORT_METHOD(sendTextMessage:(int)type
                   reject:(RCTPromiseRejectBlock)reject) {
     
     RCTextMessage *messageContent = [RCTextMessage messageWithContent:content];
-    [self sendMessage:type messageType:@"text" targetId:targetId content:messageContent pushContent:pushContent resolve:resolve reject:reject];
+    
+    void (^successBlock)(long messageId);
+    successBlock = ^(long messageId) {
+        NSString* messageid = [NSString stringWithFormat:@"%ld",messageId];
+        resolve(messageid);
+    };
+    
+    void (^errorBlock)(RCErrorCode nErrorCode , long messageId);
+    errorBlock = ^(RCErrorCode nErrorCode , long messageId) {
+        reject(@"发送失败", @"发送失败", nil);
+    };
+    
+    [self sendMessage:type messageType:@"text" targetId:targetId content:messageContent pushContent:pushContent success:successBlock error:errorBlock];
     
     
 }
@@ -350,9 +363,20 @@ RCT_EXPORT_METHOD(sendImageMessage:(int)type
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject) {
     
+    void (^successBlock)(long messageId);
+    successBlock = ^(long messageId) {
+        NSString* messageid = [NSString stringWithFormat:@"%ld",messageId];
+        resolve(messageid);
+    };
+    
+    void (^errorBlock)(RCErrorCode nErrorCode , long messageId);
+    errorBlock = ^(RCErrorCode nErrorCode , long messageId) {
+        reject(@"发送失败", @"发送失败", nil);
+    };
+    
     if([imageUrl rangeOfString:@"assets-library"].location == NSNotFound){
         RCImageMessage *imageMessage = [RCImageMessage messageWithImageURI:imageUrl];
-        [self sendMessage:type messageType:@"image" targetId:targetId content:imageMessage pushContent:pushContent resolve:resolve reject:reject];
+        [self sendMessage:type messageType:@"image" targetId:targetId content:imageMessage pushContent:pushContent success:successBlock error:errorBlock];
     }
     else{
         [self sendImageMessageWithType:type targetId:targetId ImageUrl:imageUrl pushContent:pushContent resolve:resolve reject:reject];
@@ -374,7 +398,18 @@ RCT_EXPORT_METHOD(sendImageMessage:(int)type
         
         RCImageMessage *imageMessage = [RCImageMessage messageWithImage:scaledImage];
         
-        [self sendMessage:type messageType:@"image" targetId:targetId content:imageMessage pushContent:pushContent resolve:resolve reject:reject];
+        void (^successBlock)(long messageId);
+        successBlock = ^(long messageId) {
+            NSString* messageid = [NSString stringWithFormat:@"%ld",messageId];
+            resolve(messageid);
+        };
+        
+        void (^errorBlock)(RCErrorCode nErrorCode , long messageId);
+        errorBlock = ^(RCErrorCode nErrorCode , long messageId) {
+            reject(@"发送失败", @"发送失败", nil);
+        };
+        
+        [self sendMessage:type messageType:@"image" targetId:targetId content:imageMessage pushContent:pushContent success:successBlock error:errorBlock];
         
     } failureBlock:^(NSError *error) {
         reject(@"Could not find the image",@"Could not find the image",nil);
@@ -448,26 +483,13 @@ RCT_EXPORT_METHOD(voiceBtnPressIn:(int)type
         //2.获取文件路径
         self.recordFileUrl = [NSURL fileURLWithPath:filePath];
         
-        //设置参数
-        //    NSDictionary *recordSetting = [[NSDictionary alloc] initWithObjectsAndKeys:
-        //                                   //采样率  8000/11025/22050/44100/96000（影响音频的质量）
-        //                                   [NSNumber numberWithFloat: 8000.0],AVSampleRateKey,
-        //                                   // 音频格式
-        //                                   [NSNumber numberWithInt: kAudioFormatLinearPCM],AVFormatIDKey,
-        //                                   //采样位数  8、16、24、32 默认为16
-        //                                   [NSNumber numberWithInt:16],AVLinearPCMBitDepthKey,
-        //                                   // 音频通道数 1 或 2
-        //                                   [NSNumber numberWithInt: 1], AVNumberOfChannelsKey,
-        //                                   //录音质量
-        //                                   [NSNumber numberWithInt:AVAudioQualityHigh],AVEncoderAudioQualityKey,
-        //                                   nil];
         NSDictionary * recordSetting = @{AVFormatIDKey: @(kAudioFormatLinearPCM),
                                          AVSampleRateKey: @8000.00f,
                                          AVNumberOfChannelsKey: @1,
                                          AVLinearPCMBitDepthKey: @16,
                                          AVLinearPCMIsNonInterleaved: @NO,
                                          AVLinearPCMIsFloatKey: @NO,
-                                         AVLinearPCMIsBigEndianKey: @NO};   //RongCloud 推荐参数
+                                         AVLinearPCMIsBigEndianKey: @NO};
         
         
         _recorder = [[AVAudioRecorder alloc] initWithURL:self.recordFileUrl settings:recordSetting error:nil];
@@ -484,7 +506,7 @@ RCT_EXPORT_METHOD(voiceBtnPressIn:(int)type
                 
                 _isSend = NO;
                 _duration = 0;
-                
+                _timer = [NSTimer scheduledTimerWithTimeInterval:0.5 target:self selector:@selector(onUpdateDB) userInfo:nil repeats:YES];
                 _longTimer = [NSTimer scheduledTimerWithTimeInterval:59.0 repeats:NO block:^(NSTimer * _Nonnull timer) {
                     if(!_isSend){
                         [self stopRecord:type targetId:targetId pushContent:pushContent resolve:resolve reject:reject];
@@ -501,6 +523,27 @@ RCT_EXPORT_METHOD(voiceBtnPressIn:(int)type
             NSLog(@"音频格式和文件存储格式不匹配,无法初始化Recorder");
         }
     });
+}
+
+- (void) onUpdateDB {
+    [_recorder updateMeters];
+    float level;
+    float minPw = -80.0f;
+    float pw = [_recorder averagePowerForChannel:0];
+    if (pw < minPw) {
+        level = 0.0f;
+    } else if (pw >= 0.0f) {
+        level = 1.0f;
+    } else {
+        float root = 2.0f;
+        float minAmp = powf(10.0f, 0.05f * minPw);
+        float inverseAmpRange = 1.0f / (1.0f - minAmp);
+        float amp = powf(10.0f, 0.05f * pw);
+        float adjAmp = (amp - minAmp) * inverseAmpRange;
+        level = powf(adjAmp, 1.0f / root);
+    }
+    NSDictionary *map = @{@"db":[NSString stringWithFormat:@"%f",(level * 120)]};
+    [self sendEventWithName:@"onUpdateDB" body:map];
 }
 
 /**
@@ -615,6 +658,10 @@ RCT_EXPORT_METHOD(voiceBtnPressOut:(int)type
         [_longTimer invalidate];
         _longTimer = nil;
     }
+    if(_timer){
+        [_timer invalidate];
+        _timer = nil;
+    }
 }
 
 - (void)sendVoiceMessage:(int)type
@@ -626,7 +673,23 @@ RCT_EXPORT_METHOD(voiceBtnPressOut:(int)type
                   reject:(RCTPromiseRejectBlock)reject {
     
     RCVoiceMessage *rcVoiceMessage = [RCVoiceMessage messageWithAudio:voiceData duration:duration];
-    [self sendMessage:type messageType:@"voice" targetId:targetId content:rcVoiceMessage pushContent:pushContent resolve:resolve reject:reject];
+    
+    void (^successBlock)(long messageId);
+    successBlock = ^(long messageId) {
+        NSDictionary * map = @{
+            @"uid":[NSString stringWithFormat:@"%ld",messageId],
+            @"duration":[NSString stringWithFormat:@"%ld",duration],
+            @"uri":[self.recordFileUrl absoluteString]
+        };
+        resolve(map);
+    };
+    
+    void (^errorBlock)(RCErrorCode nErrorCode , long messageId);
+    errorBlock = ^(RCErrorCode nErrorCode , long messageId) {
+        reject(@"发送失败", @"发送失败", nil);
+    };
+    
+    [self sendMessage:type messageType:@"voice" targetId:targetId content:rcVoiceMessage pushContent:pushContent success:successBlock error:errorBlock];
     
 }
 
@@ -647,15 +710,16 @@ RCT_EXPORT_METHOD(audioPlayStart:(NSString *)filePath
     }
     
     NSURL *audioUrl = [NSURL fileURLWithPath:filePath];
+    NSData *data = [[NSData alloc]initWithContentsOfURL:audioUrl];
     NSError *playerError;
-    _player = [[AVAudioPlayer alloc] initWithContentsOfURL:audioUrl error:&playerError];
+    _player = [[AVAudioPlayer alloc] initWithData:data error:&playerError];
     
-    if (_player == nil)
-    {
-        NSLog(@"fail to play audio :(");
-        reject(@"播放失败，请重试！",@"播放失败，请重试！",nil);
-        return;
-    }
+//    if (_player == nil)
+//    {
+//        NSLog(@"%@",playerError.localizedDescription);
+//        reject(@"播放失败，请重试！",@"播放失败，请重试！",nil);
+//        return;
+//    }
     
     [_player setNumberOfLoops:0];
     [_player prepareToPlay];
@@ -803,8 +867,9 @@ RCT_EXPORT_METHOD(logout) {
           targetId:(NSString *)targetId
            content:(RCMessageContent *)content
        pushContent:(NSString *) pushContent
-           resolve:(RCTPromiseResolveBlock)resolve
-            reject:(RCTPromiseRejectBlock)reject {
+           success:(void (^)(long messageId))successBlock
+             error:(void (^)(RCErrorCode nErrorCode,
+                             long messageId))errorBlock {
     
     RCConversationType conversationType;
     switch (type) {
@@ -819,17 +884,6 @@ RCT_EXPORT_METHOD(logout) {
             conversationType = ConversationType_PRIVATE;
             break;
     }
-    
-    void (^successBlock)(long messageId);
-    successBlock = ^(long messageId) {
-        NSString* messageid = [NSString stringWithFormat:@"%ld",messageId];
-        resolve(messageid);
-    };
-    
-    void (^errorBlock)(RCErrorCode nErrorCode , long messageId);
-    errorBlock = ^(RCErrorCode nErrorCode , long messageId) {
-        reject(@"发送失败", @"发送失败", nil);
-    };
     
     if ([messageType isEqualToString:@"image"]){  //图片和文件消息使用sendMediaMessage方法（此方法会将图片上传至融云服务器）
         [[self getClient] sendMediaMessage:conversationType targetId:targetId content:content pushContent:pushContent pushData:nil progress:nil success:successBlock error:errorBlock cancel:nil];
@@ -875,7 +929,9 @@ RCT_EXPORT_METHOD(logout) {
     else if ([message.content isMemberOfClass:[RCVoiceMessage class]]) {
         RCVoiceMessage *voiceMessage = (RCVoiceMessage *)message.content;
         _message[@"type"] = @"voice";
-        _message[@"wavAudioData"] = voiceMessage.wavAudioData;
+        NSString *path = [self getSandboxFilePath];
+        [voiceMessage.wavAudioData writeToFile:path atomically:NO];
+        _message[@"wavAudioData"] = path;
         _message[@"duration"] = @(voiceMessage.duration);
         _message[@"extra"] = voiceMessage.extra;
     }
