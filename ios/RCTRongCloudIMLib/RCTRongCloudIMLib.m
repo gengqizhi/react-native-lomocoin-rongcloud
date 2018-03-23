@@ -679,7 +679,7 @@ RCT_EXPORT_METHOD(voiceBtnPressOut:(int)type
         NSDictionary * map = @{
             @"uid":[NSString stringWithFormat:@"%ld",messageId],
             @"duration":[NSString stringWithFormat:@"%ld",duration],
-            @"uri":[self.recordFileUrl absoluteString]
+            @"uri":[[self.recordFileUrl absoluteString] substringFromIndex:7]
         };
         resolve(map);
     };
@@ -929,9 +929,8 @@ RCT_EXPORT_METHOD(logout) {
     else if ([message.content isMemberOfClass:[RCVoiceMessage class]]) {
         RCVoiceMessage *voiceMessage = (RCVoiceMessage *)message.content;
         _message[@"type"] = @"voice";
-        NSString *path = [self getSandboxFilePath];
-        [voiceMessage.wavAudioData writeToFile:path atomically:NO];
-        _message[@"wavAudioData"] = path;
+        _message[@"wavAudioData"] = [self saveWavAudioDataToSandbox:voiceMessage.wavAudioData
+            messageId:message.messageId];
         _message[@"duration"] = @(voiceMessage.duration);
         _message[@"extra"] = voiceMessage.extra;
     }
