@@ -934,6 +934,12 @@ RCT_EXPORT_METHOD(logout) {
         _message[@"duration"] = @(voiceMessage.duration);
         _message[@"extra"] = voiceMessage.extra;
     }
+    else if ([message.content isMemberOfClass:[RCCommandMessage class]]) {
+        RCCommandMessage *cmdMessage = (RCCommandMessage *)message.content;
+        _message[@"type"] = @"command";
+        _message[@"name"] = cmdMessage.name;
+        _message[@"data"] = cmdMessage.data;
+    }
     
     
     body[@"left"] = [NSString stringWithFormat:@"%d",nLeft];

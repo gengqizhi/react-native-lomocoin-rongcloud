@@ -41,6 +41,7 @@ import io.rong.message.ImageMessage;
 import io.rong.message.RichContentMessage;
 import io.rong.message.TextMessage;
 import io.rong.message.VoiceMessage;
+import io.rong.message.CommandMessage;
 import io.rong.push.RongPushClient;
 import io.rong.push.common.RongException;
 import io.rong.push.notification.PushNotificationMessage;
@@ -553,6 +554,11 @@ public class RongCloudIMLibModule extends ReactContextBaseJavaModule {
             }
             msg.putString("duration", voiceMessage.getDuration() + "");
             msg.putString("extra", voiceMessage.getExtra());
+        } else if (message.getContent() instanceof CommandMessage) {
+            CommandMessage cmdMessage = (CommandMessage) message.getContent();
+            msg.putString("type", "command");
+            msg.putString("name", cmdMessage.getName());
+            msg.putString("data", cmdMessage.getData());
         }
 
         return msg;
