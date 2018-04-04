@@ -45,6 +45,7 @@ public class AudioPlayUtils {
                 mediaPlayer.stop();
                 //释放资源
                 mediaPlayer.release();
+                mediaPlayer = null;
             }
         }catch (Exception e){ }
     }
